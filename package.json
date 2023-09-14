@@ -1,0 +1,26 @@
+{
+  "name": "jsonc-ast",
+  "version": "0.1.0",
+  "description": "Experimental JSONC AST parser and encoder",
+  "packageManager": "pnpm@8.7.5",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc"
+  },
+  "keywords": [],
+  "contributors": [
+    {
+      "name": "Playko",
+      "url": "https://www.playko.com/"
+    },
+    {
+      "name": "rafern",
+      "email": "rafael@playko.com"
+    }
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@xtao-org/jsonhilo": "^0.3.2",
+    "typescript": "^5.2.2"
+  }
+}
