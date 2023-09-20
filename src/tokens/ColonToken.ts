@@ -1,17 +1,26 @@
-export class ColonToken extends JSONToken {
+import { type StreamWriter } from '../util/StreamWriter.js';
+import { JSONToken } from '../base/JSONToken.js';
+import { JSONTokenType } from '../base/JSONTokenType.js';
+import { assertTokenType } from '../util/assertTokenType';
+
+export class ColonToken extends JSONToken<JSONTokenType.Colon> {
     constructor() {
-        super(JSONTokenType.Colon, false);
+        super(JSONTokenType.Colon);
     }
 
-    /**
-     * @param {JSONToken} token
-     * @returns {ColonToken}
-     */
-    static assert(token) {
-        return /** @type {ColonToken} */ assertTokenType(token, JSONTokenType.Colon);
+    override get children(): null {
+        return null;
     }
 
-    async write(streamWriter) {
+    override get isValue(): false {
+        return false;
+    }
+
+    static assert(token: JSONToken): ColonToken {
+        return assertTokenType(token, JSONTokenType.Colon);
+    }
+
+    async write(streamWriter: StreamWriter) {
         await streamWriter.writeString(':');
     }
 }

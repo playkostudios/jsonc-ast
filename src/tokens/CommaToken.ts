@@ -1,17 +1,26 @@
-export class CommaToken extends JSONToken {
+import { type StreamWriter } from '../util/StreamWriter.js';
+import { JSONToken } from '../base/JSONToken.js';
+import { JSONTokenType } from '../base/JSONTokenType.js';
+import { assertTokenType } from '../util/assertTokenType';
+
+export class CommaToken extends JSONToken<JSONTokenType.Comma> {
     constructor() {
-        super(JSONTokenType.Comma, false);
+        super(JSONTokenType.Comma);
     }
 
-    /**
-     * @param {JSONToken} token
-     * @returns {CommaToken}
-     */
-    static assert(token) {
-        return /** @type {CommaToken} */ assertTokenType(token, JSONTokenType.Comma);
+    override get children(): null {
+        return null;
     }
 
-    async write(streamWriter) {
+    override get isValue(): false {
+        return false;
+    }
+
+    static assert(token: JSONToken): CommaToken {
+        return assertTokenType(token, JSONTokenType.Comma);
+    }
+
+    async write(streamWriter: StreamWriter) {
         await streamWriter.writeString(',');
     }
 }

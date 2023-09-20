@@ -1,14 +1,23 @@
-export class EscapeToken extends JSONValueToken {
+import { type StreamWriter } from '../util/StreamWriter';
+import { JSONParentToken } from '../base/JSONParentToken';
+import { type JSONToken } from '../base/JSONToken';
+import { JSONTokenType } from '../base/JSONTokenType.js';
+import { type JSONValueToken } from '../base/JSONValueToken';
+import { assertTokenType } from '../util/assertTokenType';
+import { type CodePointsToken } from './CodePointsToken';
+import { type HexToken } from './HexToken';
+
+export class EscapeToken extends JSONParentToken<JSONTokenType.Escape> implements JSONValueToken {
     constructor() {
-        super(JSONTokenType.Escape, true);
+        super(JSONTokenType.Escape);
     }
 
-    /**
-     * @param {JSONToken} token
-     * @returns {EscapeToken}
-     */
-    static assert(token) {
-        return /** @type {EscapeToken} */ assertTokenType(token, JSONTokenType.Escape);
+    override get isValue(): true {
+        return true;
+    }
+
+    static assert(token: JSONToken): EscapeToken {
+        return assertTokenType(token, JSONTokenType.Escape);
     }
 
     evaluate() {
@@ -19,7 +28,7 @@ export class EscapeToken extends JSONValueToken {
                     throw new Error('Unexpected extra code point in escape token');
                 }
 
-                const character = child.evaluate();
+                const character = (child as CodePointsToken).evaluate();
                 if (character === '"' || character === '\\' || character === '/') {
                     str = character;
                 } else if (character === 'b') {
@@ -40,7 +49,7 @@ export class EscapeToken extends JSONValueToken {
                     throw new Error('Unexpected extra unicode hex sequence in escape token');
                 }
 
-                str = child.evaluate();
+                str = (child as HexToken).evaluate();
             } else {
                 throw new Error('Unexpected token in unicode hex sequence');
             }
@@ -53,7 +62,7 @@ export class EscapeToken extends JSONValueToken {
         return str;
     }
 
-    async write(streamWriter) {
+    async write(streamWriter: StreamWriter) {
         await streamWriter.writeString('\\');
         await super.write(streamWriter);
     }

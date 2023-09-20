@@ -1,25 +1,34 @@
-export class CodePointsToken extends JSONValueToken {
-    constructor(codePoints) {
-        super(JSONTokenType.CodePoints, false);
-        this.codePoints = codePoints;
+import { type StreamWriter } from '../util/StreamWriter.js';
+import { JSONToken } from '../base/JSONToken.js';
+import { JSONTokenType } from '../base/JSONTokenType';
+import { type JSONValueToken } from '../base/JSONValueToken.js';
+import { assertTokenType } from '../util/assertTokenType.js';
+
+export class CodePointsToken extends JSONToken<JSONTokenType.CodePoints> implements JSONValueToken {
+    constructor(readonly codePoints: Array<number>) {
+        super(JSONTokenType.CodePoints);
     }
 
-    /**
-     * @param {JSONToken} token
-     * @returns {CodePointsToken}
-     */
-    static assert(token) {
-        return /** @type {CodePointsToken} */ assertTokenType(token, JSONTokenType.CodePoints);
+    override get children(): null {
+        return null;
     }
 
-    static fromCodePoint(codePoint) {
+    override get isValue(): true {
+        return true;
+    }
+
+    static assert(token: JSONToken): CodePointsToken {
+        return assertTokenType(token, JSONTokenType.CodePoints);
+    }
+
+    static fromCodePoint(codePoint: number) {
         return new CodePointsToken([codePoint]);
     }
 
-    static fromString(str) {
+    static fromString(str: string) {
         const codePoints = [];
         for (const codePointStr of str) {
-            codePoints.push(codePointStr.codePointAt(0));
+            codePoints.push(codePointStr.codePointAt(0)!);
         }
 
         if (codePoints.length === 0) {
@@ -33,7 +42,7 @@ export class CodePointsToken extends JSONValueToken {
         return String.fromCodePoint(...this.codePoints);
     }
 
-    async write(streamWriter) {
+    async write(streamWriter: StreamWriter) {
         await streamWriter.writeCodePoints(this.codePoints);
     }
 

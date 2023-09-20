@@ -1,21 +1,27 @@
-import { JSONParentToken } from './base/JSONParentToken';
-import { JSONTokenType } from './base/JSONTokenType';
-import { type JSONValueToken } from './base/JSONValueToken';
+import { assertTokenType } from '../util/assertTokenType.js';
+import { JSONParentToken } from '../base/JSONParentToken.js';
+import { JSONTokenType } from '../base/JSONTokenType';
+import { type JSONValueToken } from '../base/JSONValueToken';
+import { type JSONToken } from '../base/JSONToken.js';
+import { CommaToken } from './CommaToken.js';
+import { valueToToken } from '../util/valueToToken.js';
+import { WhitespacesToken } from './WhitespacesToken.js';
+import { type StreamWriter } from '../util/StreamWriter.js';
 
-export class ArrayToken extends JSONParentToken implements JSONValueToken {
+export class ArrayToken extends JSONParentToken<JSONTokenType.Array> implements JSONValueToken {
     constructor() {
         super(JSONTokenType.Array);
     }
 
-    /**
-     * @param {JSONToken} token
-     * @returns {ArrayToken}
-     */
-    static assert(token) {
-        return /** @type {ArrayToken} */ assertTokenType(token, JSONTokenType.Array);
+    override get isValue(): true {
+        return true;
     }
 
-    static fromArray(arr) {
+    static assert(token: JSONToken): ArrayToken {
+        return assertTokenType(token, JSONTokenType.Array);
+    }
+
+    static fromArray(arr: Array<unknown>) {
         const token = new ArrayToken();
         const children = token.children;
         let first = true;
@@ -27,15 +33,14 @@ export class ArrayToken extends JSONParentToken implements JSONValueToken {
                 children.push(new CommaToken());
             }
 
-            children.push(JSONValueToken.fromValue(value));
+            children.push(valueToToken(value));
         }
 
         return token;
     }
 
-    /** @returns {Array<JSONValueToken>} */
-    getTokenEntries() {
-        const arr = [];
+    getTokenEntries(): Array<JSONValueToken> {
+        const arr: Array<JSONValueToken> = [];
         let expectedToken = null;
         let needsValue = false;
 
@@ -53,7 +58,7 @@ export class ArrayToken extends JSONParentToken implements JSONValueToken {
                 }
 
                 expectedToken = JSONTokenType.Comma;
-                arr.push(child);
+                arr.push(child as JSONValueToken);
                 needsValue = false;
             } else if (expectedToken === JSONTokenType.Comma) {
                 expectedToken = null;
@@ -68,10 +73,7 @@ export class ArrayToken extends JSONParentToken implements JSONValueToken {
         return arr;
     }
 
-    /**
-     * @returns {number}
-     */
-    guessValueIndent() {
+    guessValueIndent(): number {
         let indent = 0;
         const childCount = this.children.length;
 
@@ -80,7 +82,7 @@ export class ArrayToken extends JSONParentToken implements JSONValueToken {
             if (child.isValue) {
                 const prevChild = this.children[c - 1];
                 if (prevChild.type === JSONTokenType.Whitespaces) {
-                    indent = prevChild.guessIndent();
+                    indent = (prevChild as unknown as WhitespacesToken).guessIndent();
                     break;
                 }
             }
@@ -89,13 +91,7 @@ export class ArrayToken extends JSONParentToken implements JSONValueToken {
         return indent;
     }
 
-    /**
-     * @param {number} tkIdx
-     * @param {Array<JSONValueToken>} items
-     * @param {number} off
-     * @param {number | null | undefined} indentation
-     */
-    inlineInsert(tkIdx, items, off, indentation = null) {
+    inlineInsert(tkIdx: number, items: Array<JSONValueToken>, off: number, indentation: number | null = null) {
         const itemCount = items.length;
         if (itemCount - off > 0) {
             return;
@@ -118,12 +114,7 @@ export class ArrayToken extends JSONParentToken implements JSONValueToken {
         this.children.splice(tkIdx, 0, ...extraTokens);
     }
 
-    /**
-     * @param {Array<JSONValueToken>} items
-     * @param {number} off
-     * @param {number | null | undefined} indentation
-     */
-    pushArr(items, off, indentation = null) {
+    pushArr(items: Array<JSONValueToken>, off: number, indentation: number | null = null) {
         const itemCount = items.length;
         if (itemCount - off > 0) {
             return;
@@ -144,20 +135,14 @@ export class ArrayToken extends JSONParentToken implements JSONValueToken {
         this.inlineInsert(tkChildCount + 1, items, off + 1, indentation);
     }
 
-    /**
-     * @param {Array<JSONValueToken>} items
-     */
-    push(...items) {
-        this.pushArr(items);
+    push(...items: Array<JSONValueToken>) {
+        this.pushArr(items, 0);
     }
 
     /**
-     * @param {number} start
-     * @param {number} deleteCount
-     * @param {Array<JSONValueToken>} items
-     * @returns {Array<JSONValueToken>} An array with all the tokens that were removed
+     * @returns An array with all the tokens that were removed
      */
-    splice(start, deleteCount, ...items) {
+    splice(start: number, deleteCount: number, ...items: Array<JSONValueToken>): Array<JSONValueToken> {
         if (start < 0) {
             throw new Error('Negative start index not supported');
         }
@@ -167,7 +152,7 @@ export class ArrayToken extends JSONParentToken implements JSONValueToken {
         let expectedToken = null;
         let needsValue = false;
         const indentation = this.guessValueIndent();
-        const deleted = [];
+        const deleted: Array<JSONValueToken> = [];
         let deleteStart = -1;
         let deleteEnd = -1;
         let deleteNextComma = false;
@@ -197,7 +182,7 @@ export class ArrayToken extends JSONParentToken implements JSONValueToken {
                     // we're at the target!
                     if (deleteCount > 0) {
                         deleteCount--;
-                        deleted.push(child);
+                        deleted.push(child as JSONValueToken);
 
                         if (insertIdx < insertCount) {
                             // replace
@@ -205,7 +190,7 @@ export class ArrayToken extends JSONParentToken implements JSONValueToken {
                         } else if (deleteStart === -1) {
                             // start deleting range
                             deleteNextComma = lastCommaIdx === null;
-                            deleteStart = deleteNextComma ? t : lastCommaIdx;
+                            deleteStart = deleteNextComma ? t : lastCommaIdx!;
                         }
                     } else {
                         if (deleteCount === 0 && deleteNextComma && deleteStart !== -1 && deleteEnd === -1) {
@@ -275,7 +260,7 @@ export class ArrayToken extends JSONParentToken implements JSONValueToken {
                 }
 
                 expectedToken = JSONTokenType.Comma;
-                arr.push(child.evaluate());
+                arr.push((child as JSONValueToken).evaluate());
                 needsValue = false;
             } else if (expectedToken === JSONTokenType.Comma) {
                 expectedToken = null;
@@ -290,9 +275,6 @@ export class ArrayToken extends JSONParentToken implements JSONValueToken {
         return arr;
     }
 
-    /**
-     * @returns {number}
-     */
     getEndIdx() {
         for (let c = this.children.length - 1; c >= 0; c--) {
             const child = this.children[c];
@@ -304,7 +286,7 @@ export class ArrayToken extends JSONParentToken implements JSONValueToken {
         return 0;
     }
 
-    async write(streamWriter) {
+    async write(streamWriter: StreamWriter) {
         await streamWriter.writeString('[');
         await super.write(streamWriter);
         await streamWriter.writeString(']');

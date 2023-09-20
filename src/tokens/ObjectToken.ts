@@ -1,17 +1,29 @@
-export class ObjectToken extends JSONValueToken {
+import { type StreamWriter } from '../util/StreamWriter.js';
+import { JSONParentToken } from '../base/JSONParentToken.js';
+import { type JSONToken } from '../base/JSONToken.js';
+import { JSONTokenType } from '../base/JSONTokenType.js';
+import { type JSONValueToken } from '../base/JSONValueToken.js';
+import { assertTokenType } from '../util/assertTokenType.js';
+import { valueToToken } from '../util/valueToToken.js';
+import { ColonToken } from './ColonToken.js';
+import { CommaToken } from './CommaToken.js';
+import { KeyToken } from './KeyToken.js';
+import { WhitespacesToken } from './WhitespacesToken.js';
+
+export class ObjectToken extends JSONParentToken<JSONTokenType.Object> implements JSONValueToken {
     constructor() {
-        super(JSONTokenType.Object, true);
+        super(JSONTokenType.Object);
     }
 
-    /**
-     * @param {JSONToken} token
-     * @returns {ObjectToken}
-     */
-    static assert(token) {
-        return /** @type {ObjectToken} */ (assertTokenType(token, JSONTokenType.Object));
+    override get isValue(): true {
+        return true;
     }
 
-    static fromObject(obj) {
+    static assert(token: JSONToken): ObjectToken {
+        return assertTokenType(token, JSONTokenType.Object);
+    }
+
+    static fromObject(obj: Record<string, unknown>) {
         const token = new ObjectToken();
         const children = token.children;
         let first = true;
@@ -26,17 +38,16 @@ export class ObjectToken extends JSONValueToken {
             children.push(
                 KeyToken.fromString(key),
                 new ColonToken(),
-                JSONValueToken.fromValue(obj[key]),
+                valueToToken(obj[key]),
             );
         }
 
         return token;
     }
 
-    /** @returns {Record<string, unknown>} */
     evaluate() {
-        const obj = {};
-        let expectedToken = JSONTokenType.Key;
+        const obj: Record<string, unknown> = {};
+        let expectedToken: JSONTokenType | null = JSONTokenType.Key;
         let needsKey = false;
         let key = null;
 
@@ -52,7 +63,7 @@ export class ObjectToken extends JSONValueToken {
 
             if (type === JSONTokenType.Key) {
                 needsKey = false;
-                key = child.getString();
+                key = (child as KeyToken).getString();
                 expectedToken = JSONTokenType.Colon;
             } else if (type === JSONTokenType.Colon) {
                 expectedToken = null;
@@ -61,9 +72,9 @@ export class ObjectToken extends JSONValueToken {
                     throw new Error('Non-value token as value in object');
                 }
 
-                const value = child.evaluate();
+                const value = (child as JSONValueToken).evaluate();
                 expectedToken = JSONTokenType.Comma;
-                obj[key] = value;
+                obj[key!] = value;
             } else if (expectedToken === JSONTokenType.Comma) {
                 expectedToken = JSONTokenType.Key;
                 needsKey = true;
@@ -79,12 +90,8 @@ export class ObjectToken extends JSONValueToken {
         return obj;
     }
 
-    /**
-     * @param {string} key
-     * @returns {JSONValueToken | boolean}
-     */
-    maybeGetValueTokenOfKeyOrHasKeys(key) {
-        let expectedToken = JSONTokenType.Key;
+    maybeGetValueTokenOfKeyOrHasKeys(key: string): JSONValueToken | boolean {
+        let expectedToken: JSONTokenType | null = JSONTokenType.Key;
         let match = false;
         let hadKeys = false;
 
@@ -101,7 +108,7 @@ export class ObjectToken extends JSONValueToken {
             if (type === JSONTokenType.Key) {
                 hadKeys = true;
 
-                if (key === child.getString()) {
+                if (key === (child as KeyToken).getString()) {
                     match = true;
                 }
 
@@ -114,7 +121,7 @@ export class ObjectToken extends JSONValueToken {
                 }
 
                 if (match) {
-                    return child;
+                    return child as JSONValueToken;
                 }
 
                 expectedToken = JSONTokenType.Comma;
@@ -126,11 +133,7 @@ export class ObjectToken extends JSONValueToken {
         return hadKeys;
     }
 
-    /**
-     * @param {string} key
-     * @returns {JSONValueToken | null}
-     */
-    maybeGetValueTokenOfKey(key) {
+    maybeGetValueTokenOfKey(key: string) {
         const token = this.maybeGetValueTokenOfKeyOrHasKeys(key);
         if (token === true || token === false) {
             return null;
@@ -139,11 +142,7 @@ export class ObjectToken extends JSONValueToken {
         }
     }
 
-    /**
-     * @param {string} key
-     * @returns {JSONValueToken}
-     */
-    getValueTokenOfKey(key) {
+    getValueTokenOfKey(key: string) {
         const token = this.maybeGetValueTokenOfKey(key);
         if (token === null) {
             throw new Error(`Object has no key "${key}"`);
@@ -152,11 +151,7 @@ export class ObjectToken extends JSONValueToken {
         }
     }
 
-    /**
-     * @param {string} key
-     * @returns {unknown}
-     */
-    maybeGetValueOfKey(key) {
+    maybeGetValueOfKey(key: string) {
         const token = this.maybeGetValueTokenOfKey(key);
         if (token) {
             return token.evaluate();
@@ -165,20 +160,11 @@ export class ObjectToken extends JSONValueToken {
         }
     }
 
-    /**
-     * @param {string} key
-     * @returns {unknown}
-     */
-    getValueOfKey(key) {
+    getValueOfKey(key: string) {
         return this.getValueTokenOfKey(key).evaluate();
     }
 
-    /**
-     * @param {string} key
-     * @param {unknown} value
-     * @param {number} indent
-     */
-    setValueOfKey(key, value, indent = 0) {
+    setValueOfKey(key: string, value: unknown, indent = 0) {
         const token = this.maybeGetValueTokenOfKeyOrHasKeys(key);
         if (token === true || token === false) {
             let idx = this.getEndIdx();
@@ -200,14 +186,14 @@ export class ObjectToken extends JSONValueToken {
                 KeyToken.fromString(key),
                 new ColonToken(),
                 WhitespacesToken.fromString(' '),
-                JSONValueToken.fromValue(value),
+                valueToToken(value),
             );
 
             return true;
         } else {
             const curValue = token.evaluate();
             if (curValue !== value) {
-                this.replaceChild(token, JSONValueToken.fromValue(value));
+                this.replaceChild(token, valueToToken(value));
                 return true;
             }
         }
@@ -215,13 +201,10 @@ export class ObjectToken extends JSONValueToken {
         return false;
     }
 
-    /**
-     * @returns {Array<[key: string, value: JSONValueToken]>}
-     */
     getTokenEntries() {
-        const entries = [];
-        let expectedToken = JSONTokenType.Key;
-        let key = null;
+        const entries: Array<[key: string, value: JSONValueToken]> = [];
+        let expectedToken: JSONTokenType | null = JSONTokenType.Key;
+        let key: string | null = null;
 
         for (const child of this.children) {
             const type = child.type;
@@ -234,7 +217,7 @@ export class ObjectToken extends JSONValueToken {
             }
 
             if (type === JSONTokenType.Key) {
-                key = child.getString();
+                key = (child as KeyToken).getString();
                 expectedToken = JSONTokenType.Colon;
             } else if (type === JSONTokenType.Colon) {
                 expectedToken = null;
@@ -243,7 +226,7 @@ export class ObjectToken extends JSONValueToken {
                     throw new Error('Non-value token as value in object');
                 }
 
-                entries.push([key, child]);
+                entries.push([key!, child as JSONValueToken]);
                 expectedToken = JSONTokenType.Comma;
             } else if (expectedToken === JSONTokenType.Comma) {
                 expectedToken = JSONTokenType.Key;
@@ -257,12 +240,8 @@ export class ObjectToken extends JSONValueToken {
         }
     }
 
-    /**
-     * @param {string} key
-     * @returns {JSONValueToken | boolean}
-     */
-    deleteKey(key) {
-        let expectedToken = JSONTokenType.Key;
+    deleteKey(key: string): boolean {
+        let expectedToken: JSONTokenType | null = JSONTokenType.Key;
         let lastCommaIdx = null;
         let deleteStart = -1;
         let deleteEnd = -1;
@@ -284,7 +263,7 @@ export class ObjectToken extends JSONValueToken {
                 if (deleteStart !== -1) {
                     deleteEnd = t;
                     break;
-                } else if (key === child.getString()) {
+                } else if (key === (child as KeyToken).getString()) {
                     deleteStart = lastCommaIdx === null ? t : lastCommaIdx;
                 }
 
@@ -321,9 +300,6 @@ export class ObjectToken extends JSONValueToken {
         }
     }
 
-    /**
-     * @returns {number}
-     */
     guessKeyIndent() {
         let keyIndent = 0;
         const childCount = this.children.length;
@@ -333,7 +309,7 @@ export class ObjectToken extends JSONValueToken {
             if (child.type === JSONTokenType.Key) {
                 const prevChild = this.children[c - 1];
                 if (prevChild.type === JSONTokenType.Whitespaces) {
-                    keyIndent = prevChild.guessIndent();
+                    keyIndent = (prevChild as WhitespacesToken).guessIndent();
                     break;
                 }
             }
@@ -358,9 +334,6 @@ export class ObjectToken extends JSONValueToken {
         }
     }
 
-    /**
-     * @returns {number}
-     */
     getEndIdx() {
         for (let c = this.children.length - 1; c >= 0; c--) {
             const child = this.children[c];
@@ -372,7 +345,7 @@ export class ObjectToken extends JSONValueToken {
         return 0;
     }
 
-    async write(streamWriter) {
+    async write(streamWriter: StreamWriter) {
         await streamWriter.writeString('{');
         await super.write(streamWriter);
         await streamWriter.writeString('}');

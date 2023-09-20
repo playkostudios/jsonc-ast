@@ -1,17 +1,25 @@
-export class MultiLineCommentToken extends JSONToken {
+import { type StreamWriter } from '../util/StreamWriter.js';
+import { JSONParentToken } from '../base/JSONParentToken.js';
+import { type JSONToken } from '../base/JSONToken.js';
+import { JSONTokenType } from '../base/JSONTokenType.js';
+import { assertTokenType } from '../util/assertTokenType.js';
+import { CodePointsToken } from './CodePointsToken.js';
+import { WhitespacesToken } from './WhitespacesToken.js';
+
+export class MultiLineCommentToken extends JSONParentToken<JSONTokenType.MultiLineComment> {
     constructor() {
-        super(JSONTokenType.MultiLineComment, true);
+        super(JSONTokenType.MultiLineComment);
     }
 
-    /**
-     * @param {JSONToken} token
-     * @returns {MultiLineCommentToken}
-     */
-    static assert(token) {
-        return /** @type {MultiLineCommentToken} */ assertTokenType(token, JSONTokenType.MultiLineComment);
+    override get isValue(): false {
+        return false;
     }
 
-    static wrapFromString(str) {
+    static assert(token: JSONToken): MultiLineCommentToken {
+        return assertTokenType(token, JSONTokenType.MultiLineComment);
+    }
+
+    static wrapFromString(str: string) {
         const token = new MultiLineCommentToken();
         if (str !== '') {
             token.children.push(CodePointsToken.fromString(str));
@@ -22,7 +30,7 @@ export class MultiLineCommentToken extends JSONToken {
         return wsToken;
     }
 
-    async write(streamWriter) {
+    async write(streamWriter: StreamWriter) {
         await streamWriter.writeString('/*');
         await super.write(streamWriter);
         await streamWriter.writeString('*/');

@@ -1,15 +1,12 @@
 import { type JSONTokenType } from './JSONTokenType.js';
 import { JSONTokenTypeNames } from './JSONTokenTypeNames.js';
-import { type StreamWriter } from '../StreamWriter.js';
+import { type StreamWriter } from '../util/StreamWriter.js';
 
-export abstract class JSONToken {
+export abstract class JSONToken<T extends JSONTokenType = JSONTokenType> {
     abstract readonly children: JSONToken[] | null;
+    abstract readonly isValue: boolean;
 
-    constructor(readonly type: JSONTokenType) {}
-
-    get isValue() {
-        return false;
-    }
+    constructor(readonly type: T) {}
 
     async write(streamWriter: StreamWriter) {
         if (this.children) {

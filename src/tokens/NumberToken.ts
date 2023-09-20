@@ -1,17 +1,24 @@
-export class NumberToken extends JSONValueToken {
+import { JSONParentToken } from '../base/JSONParentToken.js';
+import { type JSONToken } from '../base/JSONToken.js';
+import { JSONTokenType } from '../base/JSONTokenType.js';
+import { type JSONValueToken } from '../base/JSONValueToken.js';
+import { assertTokenType } from '../util/assertTokenType.js';
+import { CodePointsToken } from './CodePointsToken.js';
+
+export class NumberToken extends JSONParentToken<JSONTokenType.Number> implements JSONValueToken {
     constructor() {
-        super(JSONTokenType.Number, true);
+        super(JSONTokenType.Number);
     }
 
-    /**
-     * @param {JSONToken} token
-     * @returns {NumberToken}
-     */
-    static assert(token) {
-        return /** @type {NumberToken} */ assertTokenType(token, JSONTokenType.Number);
+    override get isValue(): true {
+        return true;
     }
 
-    static fromNumber(num) {
+    static assert(token: JSONToken): NumberToken {
+        return assertTokenType(token, JSONTokenType.Number);
+    }
+
+    static fromNumber(num: number) {
         if (!isFinite(num)) {
             throw new Error("Can't encode Infinity in JSON");
         } else if (isNaN(num)) {
@@ -21,7 +28,7 @@ export class NumberToken extends JSONValueToken {
         return NumberToken.fromString(num.toString());
     }
 
-    static fromString(str) {
+    static fromString(str: string) {
         const token = new NumberToken();
         token.children.push(CodePointsToken.fromString(str));
         return token;
@@ -31,7 +38,7 @@ export class NumberToken extends JSONValueToken {
         const parts = [];
         for (const child of this.children) {
             if (child.type === JSONTokenType.CodePoints) {
-                parts.push(child.evaluate());
+                parts.push((child as CodePointsToken).evaluate());
             } else {
                 throw new Error('Unexpected token in number');
             }
