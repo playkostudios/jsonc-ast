@@ -1,6 +1,6 @@
 import { type StreamWriter } from '../util/StreamWriter.js';
 import { JSONToken } from '../base/JSONToken.js';
-import { JSONTokenType } from '../base/JSONTokenType';
+import { JSONTokenType } from '../base/JSONTokenType.js';
 import { type JSONValueToken } from '../base/JSONValueToken.js';
 import { assertTokenType } from '../util/assertTokenType.js';
 

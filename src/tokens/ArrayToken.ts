@@ -1,7 +1,7 @@
 import { assertTokenType } from '../util/assertTokenType.js';
 import { JSONParentToken } from '../base/JSONParentToken.js';
-import { JSONTokenType } from '../base/JSONTokenType';
-import { type JSONValueToken } from '../base/JSONValueToken';
+import { JSONTokenType } from '../base/JSONTokenType.js';
+import { type JSONValueToken } from '../base/JSONValueToken.js';
 import { type JSONToken } from '../base/JSONToken.js';
 import { CommaToken } from './CommaToken.js';
 import { valueToToken } from '../util/valueToToken.js';

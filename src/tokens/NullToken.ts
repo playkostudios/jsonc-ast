@@ -1,7 +1,7 @@
-import { type StreamWriter } from '../util/StreamWriter';
-import { JSONToken } from '../base/JSONToken';
-import { JSONTokenType } from '../base/JSONTokenType';
-import { type JSONValueToken } from '../base/JSONValueToken';
+import { type StreamWriter } from '../util/StreamWriter.js';
+import { JSONToken } from '../base/JSONToken.js';
+import { JSONTokenType } from '../base/JSONTokenType.js';
+import { type JSONValueToken } from '../base/JSONValueToken.js';
 import { assertTokenType } from '../util/assertTokenType.js';
 
 export class NullToken extends JSONToken<JSONTokenType.Null> implements JSONValueToken {

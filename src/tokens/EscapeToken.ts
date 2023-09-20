@@ -1,11 +1,11 @@
-import { type StreamWriter } from '../util/StreamWriter';
-import { JSONParentToken } from '../base/JSONParentToken';
-import { type JSONToken } from '../base/JSONToken';
+import { type StreamWriter } from '../util/StreamWriter.js';
+import { JSONParentToken } from '../base/JSONParentToken.js';
+import { type JSONToken } from '../base/JSONToken.js';
 import { JSONTokenType } from '../base/JSONTokenType.js';
-import { type JSONValueToken } from '../base/JSONValueToken';
-import { assertTokenType } from '../util/assertTokenType';
-import { type CodePointsToken } from './CodePointsToken';
-import { type HexToken } from './HexToken';
+import { type JSONValueToken } from '../base/JSONValueToken.js';
+import { assertTokenType } from '../util/assertTokenType.js';
+import { type CodePointsToken } from './CodePointsToken.js';
+import { type HexToken } from './HexToken.js';
 
 export class EscapeToken extends JSONParentToken<JSONTokenType.Escape> implements JSONValueToken {
     constructor() {

@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "name": "jsonc-ast",
   "version": "0.1.0",
   "description": "Experimental JSONC AST parser and encoder",
@@ -19,10 +20,12 @@
     }
   ],
   "license": "MIT",
+  "dependencies": {
+    "@xtao-org/jsonhilo": "github:playkostudios/jsonhilo#playko-fix-0"
+  },
   "devDependencies": {
     "@tsconfig/node12": "^12.1.0",
     "@types/node": "^20.6.1",
-    "@xtao-org/jsonhilo": "^0.3.2",
     "typescript": "^5.2.2"
   }
 }

@@ -1,38 +1,52 @@
-import { JsonLow, unexpected, unexpectedEnd } from '@xtao-org/jsonhilo';
+import { JsonLow, CodePoint, unexpected, unexpectedEnd, JsonLowHandler, JsonLowHandlers, JsonLowInitialState, JsonLowState } from '@xtao-org/jsonhilo';
 
-const _newline_ = '\n'.codePointAt(0);
-const _slash_ = '/'.codePointAt(0);
-export const _asterisk_ = '*'.codePointAt(0);
+export const _asterisk_ = '*'.codePointAt(0)!;
 
-export const JsonCLow = (next, initialState = {}) => {
-    let selfOrig = JsonLow(next, initialState);
+enum JsonCLowModeOverride {
+    /** First character of comment delimiter found (/) */
+    _comment = 'Mode.jsonc:_comment',
+    /** Multi line comment */
+    commentMulti_ = 'Mode.jsonc:commentMulti_',
+    /** Maybe end of multi line comment (*) */
+    commentMultiMaybeEnd_ = 'Mode.jsonc:commentMultiMaybeEnd_',
+    /** Single line comment */
+    commentSingle_ = 'Mode.jsonc:commentSingle_',
+};
 
-    // Mode._comment - first character of comment delimiter found (/)
-    // Mode.commentMulti_ - multi line comment
-    // Mode.commentMultiMaybeEnd_ - maybe end of multi line comment (*)
-    // Mode.commentSingle_ - single line comment
-    let modeOverride = null;
+export type JsonCLowHandlers<Feedback, End> = JsonLowHandlers<Feedback, End> & {
+  firstCommentSlash?: JsonLowHandler<Feedback>,
+  openSingleLineComment?: JsonLowHandler<Feedback>,
+  // XXX single line comment might not have code point if at end of json (EOF
+  //     instead of newline)
+  closeSingleLineComment?: (codePoint?: number) => Feedback,
+  openMultiLineComment?: JsonLowHandler<Feedback>,
+  closeMultiLineComment?: JsonLowHandler<Feedback>,
+  multiLineCommentAsterisk?: JsonLowHandler<Feedback>,
+};
 
-    // XXX need to track hexIndex separately because the JsonLow api doesn't
-    // provide it
-    let hexIndex = 0;
+export function JsonCLow<Feedback, End>(next: JsonCLowHandlers<Feedback, End>, initialState?: JsonLowInitialState): {
+  codePoint(codePoint: number): Feedback,
+  end(): End,
+  state(): JsonLowState,
+} {
+    let selfOrig = JsonLow<Feedback, End>(next, initialState);
+    let modeOverride: JsonCLowModeOverride | null = null;
+
+    switch(initialState?.mode) {
+    case JsonCLowModeOverride._comment:
+    case JsonCLowModeOverride.commentMulti_:
+    case JsonCLowModeOverride.commentMultiMaybeEnd_:
+    case JsonCLowModeOverride.commentSingle_:
+        modeOverride = initialState?.mode;
+    }
 
     const self = {
-        codePoint: (code) => {
+        codePoint: (code: number): Feedback => {
             switch(modeOverride) {
                 case null: {
-                    const state = selfOrig.state();
-                    const mode = state.mode;
-                    if (mode === 'Mode.hex_') {
-                        if (hexIndex < 3) {
-                            hexIndex++;
-                        } else {
-                            hexIndex = 0;
-                        }
-                    }
-
-                    if (code === _slash_) {
-                        switch (mode) {
+                    if (code === CodePoint._slash_) {
+                        const state = selfOrig.state();
+                        switch (state.mode) {
                             case 'Mode.zero_':
                             case 'Mode.onenine_':
                             case 'Mode.onenineDigit_':
@@ -47,8 +61,10 @@ export const JsonCLow = (next, initialState = {}) => {
                                 const parents = state.parents;
                                 selfOrig = JsonLow(next, {
                                     mode: parents[parents.length - 1] === 'Parent.top' ? 'Mode._value' : 'Mode.value_',
-                                    parents, isKey: state.isKey,
-                                    maxDepth: initialState.maxDepth, hexIndex,
+                                    parents,
+                                    isKey: state.isKey,
+                                    maxDepth: state.maxDepth,
+                                    hexIndex: state.hexIndex,
                                 });
                                 next.closeNumber?.();
                             }   // falls through
@@ -57,60 +73,60 @@ export const JsonCLow = (next, initialState = {}) => {
                             case 'Mode._key':
                             case 'Mode.key_':
                                 // start comment
-                                modeOverride = 'Mode._comment';
-                                return next.firstCommentSlash?.();
+                                modeOverride = JsonCLowModeOverride._comment;
+                                return next.firstCommentSlash?.(code) as Feedback;
                         }
                     }
 
                     return selfOrig.codePoint(code);
                 }
-                case 'Mode._comment': {
-                    if (code === _slash_) {
-                        modeOverride = 'Mode.commentSingle_';
-                        return next.openSingleLineComment?.();
+                case JsonCLowModeOverride._comment: {
+                    if (code === CodePoint._slash_) {
+                        modeOverride = JsonCLowModeOverride.commentSingle_;
+                        return next.openSingleLineComment?.(code) as Feedback;
                     } else if (code === _asterisk_) {
-                        modeOverride = 'Mode.commentMulti_';
-                        return next.openMultiLineComment?.();
+                        modeOverride = JsonCLowModeOverride.commentMulti_;
+                        return next.openMultiLineComment?.(code) as Feedback;
                     } else {
                         modeOverride = null;
-                        return unexpected(code, 'after first comment slash', ['*', '/']);
+                        return unexpected(code, 'after first comment slash', ['*', '/']) as Feedback;
                     }
                 }
-                case 'Mode.commentMultiMaybeEnd_': {
-                    if (code === _slash_) {
+                case JsonCLowModeOverride.commentMultiMaybeEnd_: {
+                    if (code === CodePoint._slash_) {
                         modeOverride = null;
-                        return next.closeMultiLineComment?.();
+                        return next.closeMultiLineComment?.(code) as Feedback;
                     } else {
-                        modeOverride = 'Mode.commentMulti_';
+                        modeOverride = JsonCLowModeOverride.commentMulti_;
                     }
                 }   // falls through
-                case 'Mode.commentMulti_': {
+                case JsonCLowModeOverride.commentMulti_: {
                     if (code === _asterisk_) {
-                        modeOverride = 'Mode.commentMultiMaybeEnd_';
-                        return next.multiLineCommentAsterisk?.();
+                        modeOverride = JsonCLowModeOverride.commentMultiMaybeEnd_;
+                        return next.multiLineCommentAsterisk?.(code) as Feedback;
                     } else {
-                        return next.codePoint?.(code);
+                        return next.codePoint?.(code) as Feedback;
                     }
                 }
-                case 'Mode.commentSingle_': {
-                    if (code === _newline_) {
+                case JsonCLowModeOverride.commentSingle_: {
+                    if (code === CodePoint._newline_) {
                         modeOverride = null;
-                        next.closeSingleLineComment?.();
+                        next.closeSingleLineComment?.(code);
                         return self.codePoint(code);
                     } else {
-                        return next.codePoint?.(code);
+                        return next.codePoint?.(code) as Feedback;
                     }
                 }
             }
         },
         end: () => {
-            if (modeOverride === 'Mode.commentSingle_') {
+            if (modeOverride === JsonCLowModeOverride.commentSingle_) {
                 next.closeSingleLineComment?.();
                 modeOverride = null;
             }
 
             if (modeOverride !== null) {
-                return unexpectedEnd('incomplete comment!');
+                return unexpectedEnd('incomplete comment!') as End;
             }
 
             return selfOrig.end();
@@ -118,7 +134,7 @@ export const JsonCLow = (next, initialState = {}) => {
         state: () => {
             const parentState = selfOrig.state();
             if (modeOverride !== null) {
-                return { mode: modeOverride, parents: parentState.parents, isKey: parentState.isKey, downstream: parentState.downstream };
+                return { ...parentState, mode: modeOverride };
             } else {
                 return parentState;
             }

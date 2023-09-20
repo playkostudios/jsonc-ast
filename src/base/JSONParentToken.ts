@@ -1,7 +1,7 @@
 import { JSONToken } from './JSONToken.js';
 import { type JSONTokenType } from './JSONTokenType.js';
 
-export abstract class JSONParentToken<T extends JSONTokenType> extends JSONToken<T> {
+export abstract class JSONParentToken<T extends JSONTokenType = JSONTokenType> extends JSONToken<T> {
     override readonly children: JSONToken[] = [];
 
     replaceChild(oldChild: JSONToken, newChild: JSONToken) {

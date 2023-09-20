@@ -1,7 +1,7 @@
 import { type StreamWriter } from '../util/StreamWriter.js';
 import { JSONToken } from '../base/JSONToken.js';
 import { JSONTokenType } from '../base/JSONTokenType.js';
-import { assertTokenType } from '../util/assertTokenType';
+import { assertTokenType } from '../util/assertTokenType.js';
 
 export class CommaToken extends JSONToken<JSONTokenType.Comma> {
     constructor() {
