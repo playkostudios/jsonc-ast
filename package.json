@@ -1,6 +1,6 @@
 {
   "type": "module",
-  "name": "jsonc-ast",
+  "name": "@playkostudios/jsonc-ast",
   "version": "0.1.0",
   "description": "Experimental JSONC AST parser and encoder",
   "packageManager": "pnpm@8.7.5",
