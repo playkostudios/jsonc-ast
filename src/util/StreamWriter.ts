@@ -1,13 +1,14 @@
-import { Utf8c2bs } from 'utf8x2x';
+import { type CodePointHandler, Utf8c2bs } from 'utf8x2x';
 import { createWriteStream, type WriteStream } from 'node:fs';
 
 export class StreamWriter {
     private stream: WriteStream | null = null;
     private queuedChunks: Uint8Array[] = [];
     private err: unknown;
+    private c2b: CodePointHandler
 
     constructor(path: string) {
-        const stream = createWriteStream(path, { encoding: 'utf8' });
+        const stream = createWriteStream(path, { encoding: 'binary' });
         stream.on('error', (err) => {
             this.stream = null;
             this.err = err;

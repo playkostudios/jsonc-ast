@@ -21,7 +21,8 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@xtao-org/jsonhilo": "github:playkostudios/jsonhilo#playko-fix-0"
+    "@xtao-org/jsonhilo": "github:playkostudios/jsonhilo#playko-fix-0",
+    "utf8x2x": "github:xtao-org/utf8x2x#semver:0.2.2"
   },
   "devDependencies": {
     "@tsconfig/node12": "^12.1.0",

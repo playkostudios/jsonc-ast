@@ -2,8 +2,12 @@
   "extends": "@tsconfig/node12/tsconfig.json",
   "compilerOptions": {
     "outDir": "dist",
-    "declaration": true
+    "declaration": true,
+    "baseUrl": ".",
+    "paths": {
+      "*": ["./types/*"]
+    }
   },
-  "include": ["src"],
+  "include": ["src", "types"],
   "exclude": ["node_modules", "dist"]
 }
