@@ -1,7 +1,7 @@
 {
   "type": "module",
   "name": "@playkostudios/jsonc-ast",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Experimental JSONC AST parser and encoder",
   "packageManager": "pnpm@8.7.5",
   "main": "dist/index.js",
@@ -23,6 +23,10 @@
     }
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/playkostudios/wle-cleaner.git"
+  },
   "dependencies": {
     "@xtao-org/jsonhilo": "github:playkostudios/jsonhilo#playko-fix-0",
     "utf8x2x": "github:xtao-org/utf8x2x#semver:0.2.2"

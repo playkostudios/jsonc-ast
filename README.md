@@ -8,12 +8,11 @@ Note that this loses the benefits of using a streaming parser; the entire JSON
 document is stored in memory. Using `jsonhilo` may be more appropriate for your
 use-case.
 
+Source code: https://github.com/playkostudios/wle-cleaner
+NPM package: https://www.npmjs.com/package/@playkostudios/jsonc-ast
+
 # Building
 
 ```
 pnpm run build
 ```
-
-# Usage
-
-TODO
