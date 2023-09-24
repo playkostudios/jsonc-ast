@@ -1,4 +1,4 @@
-import { JsonLow, CodePoint, unexpected, unexpectedEnd, JsonLowHandler, JsonLowHandlers, JsonLowInitialState, JsonLowState } from '@xtao-org/jsonhilo';
+import { JsonLow, CodePoint, unexpected, unexpectedEnd, type JsonLowHandler, type JsonLowHandlers, type JsonLowInitialState, type JsonLowState, type JsonLowConfig, type JsonStandardFeedback, type JsonStandardEnd } from '@xtao-org/jsonhilo';
 
 export const _asterisk_ = '*'.codePointAt(0)!;
 
@@ -24,12 +24,13 @@ export type JsonCLowHandlers<Feedback, End> = JsonLowHandlers<Feedback, End> & {
   multiLineCommentAsterisk?: JsonLowHandler<Feedback>,
 };
 
-export function JsonCLow<Feedback, End>(next: JsonCLowHandlers<Feedback, End>, initialState?: JsonLowInitialState): {
-  codePoint(codePoint: number): Feedback,
-  end(): End,
-  state(): JsonLowState,
+export function JsonCLow<Feedback, End, DownstreamState = unknown, DownstreamConfig = unknown>(next: JsonCLowHandlers<Feedback, End>, initialState?: JsonLowInitialState): {
+  codePoint(codePoint: number): Feedback | JsonStandardFeedback | undefined,
+  end(): End | JsonStandardEnd | undefined,
+  state(): JsonLowState<DownstreamState>,
+  config(): JsonLowConfig<DownstreamConfig>,
 } {
-    let selfOrig = JsonLow<Feedback, End>(next, initialState);
+    let selfOrig = JsonLow<Feedback, End, DownstreamState, DownstreamConfig>(next, initialState);
     let modeOverride: JsonCLowModeOverride | null = null;
 
     switch(initialState?.mode) {
@@ -41,7 +42,7 @@ export function JsonCLow<Feedback, End>(next: JsonCLowHandlers<Feedback, End>, i
     }
 
     const self = {
-        codePoint: (code: number): Feedback => {
+        codePoint: (code: number): Feedback | JsonStandardFeedback | undefined => {
             switch(modeOverride) {
                 case null: {
                     if (code === CodePoint._slash_) {
@@ -59,12 +60,11 @@ export function JsonCLow<Feedback, End>(next: JsonCLowHandlers<Feedback, End>, i
                                 // JsonLow instance with the new state as the
                                 // initial state
                                 const parents = state.parents;
+                                const config = selfOrig.config();
                                 selfOrig = JsonLow(next, {
+                                    ...state,
+                                    ...config,
                                     mode: parents[parents.length - 1] === 'Parent.top' ? 'Mode._value' : 'Mode.value_',
-                                    parents,
-                                    isKey: state.isKey,
-                                    maxDepth: state.maxDepth,
-                                    hexIndex: state.hexIndex,
                                 });
                                 next.closeNumber?.();
                             }   // falls through
@@ -74,7 +74,7 @@ export function JsonCLow<Feedback, End>(next: JsonCLowHandlers<Feedback, End>, i
                             case 'Mode.key_':
                                 // start comment
                                 modeOverride = JsonCLowModeOverride._comment;
-                                return next.firstCommentSlash?.(code) as Feedback;
+                                return next.firstCommentSlash?.(code);
                         }
                     }
 
@@ -83,19 +83,19 @@ export function JsonCLow<Feedback, End>(next: JsonCLowHandlers<Feedback, End>, i
                 case JsonCLowModeOverride._comment: {
                     if (code === CodePoint._slash_) {
                         modeOverride = JsonCLowModeOverride.commentSingle_;
-                        return next.openSingleLineComment?.(code) as Feedback;
+                        return next.openSingleLineComment?.(code);
                     } else if (code === _asterisk_) {
                         modeOverride = JsonCLowModeOverride.commentMulti_;
-                        return next.openMultiLineComment?.(code) as Feedback;
+                        return next.openMultiLineComment?.(code);
                     } else {
                         modeOverride = null;
-                        return unexpected(code, 'after first comment slash', ['*', '/']) as Feedback;
+                        return unexpected(code, 'after first comment slash', ['*', '/']);
                     }
                 }
                 case JsonCLowModeOverride.commentMultiMaybeEnd_: {
                     if (code === CodePoint._slash_) {
                         modeOverride = null;
-                        return next.closeMultiLineComment?.(code) as Feedback;
+                        return next.closeMultiLineComment?.(code);
                     } else {
                         modeOverride = JsonCLowModeOverride.commentMulti_;
                     }
@@ -103,9 +103,9 @@ export function JsonCLow<Feedback, End>(next: JsonCLowHandlers<Feedback, End>, i
                 case JsonCLowModeOverride.commentMulti_: {
                     if (code === _asterisk_) {
                         modeOverride = JsonCLowModeOverride.commentMultiMaybeEnd_;
-                        return next.multiLineCommentAsterisk?.(code) as Feedback;
+                        return next.multiLineCommentAsterisk?.(code);
                     } else {
-                        return next.codePoint?.(code) as Feedback;
+                        return next.codePoint?.(code);
                     }
                 }
                 case JsonCLowModeOverride.commentSingle_: {
@@ -114,7 +114,7 @@ export function JsonCLow<Feedback, End>(next: JsonCLowHandlers<Feedback, End>, i
                         next.closeSingleLineComment?.(code);
                         return self.codePoint(code);
                     } else {
-                        return next.codePoint?.(code) as Feedback;
+                        return next.codePoint?.(code);
                     }
                 }
             }
@@ -126,7 +126,7 @@ export function JsonCLow<Feedback, End>(next: JsonCLowHandlers<Feedback, End>, i
             }
 
             if (modeOverride !== null) {
-                return unexpectedEnd('incomplete comment!') as End;
+                return unexpectedEnd('incomplete comment!');
             }
 
             return selfOrig.end();
@@ -139,6 +139,7 @@ export function JsonCLow<Feedback, End>(next: JsonCLowHandlers<Feedback, End>, i
                 return parentState;
             }
         },
+        config: () => selfOrig.config(),
     };
 
     return self;
