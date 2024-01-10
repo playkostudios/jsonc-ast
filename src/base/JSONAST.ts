@@ -299,7 +299,7 @@ export class JSONAST {
                 });
 
                 readStream.on('end', () => {
-                    parser.end();
+                    if (parser.end()) reject(new Error('Invalid JSON file'));
                 });
 
                 readStream.on('error', (err) => {
