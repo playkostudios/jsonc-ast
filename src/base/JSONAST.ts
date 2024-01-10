@@ -291,20 +291,17 @@ export class JSONAST {
 
                 const readStream = createReadStream(path);
 
-                readStream.on('readable', () => {
-                    let chunk;
-                    while (null !== (chunk = readStream.read())) {
-                        parser.bytes(chunk);
-                    }
-                });
-
                 readStream.on('end', () => {
                     if (parser.end()) reject(new Error('Invalid JSON file'));
                 });
 
-                readStream.on('error', (err) => {
-                    parser.end();
+                readStream.once('error', (err) => {
                     reject(err);
+                    parser.end();
+                });
+
+                readStream.on('data', (chunk: Buffer) => {
+                    parser.bytes(chunk);
                 });
             } catch(err) {
                 reject(err);
