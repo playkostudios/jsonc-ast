@@ -1,5 +1,5 @@
 import { createReadStream } from 'node:fs';
-import { isError, JsonErrorType, JsonStandardFeedback, JsonUnexpectedFeedback } from '@xtao-org/jsonhilo';
+import { isError, JsonErrorType, type JsonStandardFeedback, type JsonUnexpectedFeedback } from '@xtao-org/jsonhilo';
 import { Utf8bs2c } from 'utf8x2x';
 import { JsonCLow, _asterisk_ } from './JsonCLow.js';
 import { ArrayToken } from '../tokens/ArrayToken.js';
@@ -292,24 +292,29 @@ export class JSONAST {
                     const feedback = ret as JsonStandardFeedback;
                     if ('message' in feedback) {
                         reject(new Error(`Invalid JSON file; ${feedback.message}`));
-                    } else if (feedback.errorType == JsonErrorType.unexpected) {
-                        const expectedParts: string[] = [];
-                        for (const candidate of (feedback as JsonUnexpectedFeedback).expected) {
-                            if (Array.isArray(candidate)) {
-                                expectedParts.push(`'${candidate[0]}'-'${candidate[1]}'`);
-                            } else if (candidate.length === 1) {
-                                expectedParts.push(`'${candidate}'`);
-                            } else {
-                                expectedParts.push(candidate);
+                    } else if (feedback.errorType === JsonErrorType.unexpected) {
+                        const unexpectedFeedback = feedback as JsonUnexpectedFeedback;
+                        if (!unexpectedFeedback.expected) {
+                            reject(new Error(`Invalid JSON file; unexpected '${String.fromCodePoint(feedback.codePoint)}' ${feedback.context}`));
+                        } else {
+                            const expectedParts: string[] = [];
+                            for (const candidate of unexpectedFeedback.expected) {
+                                if (Array.isArray(candidate)) {
+                                    expectedParts.push(`'${candidate[0]}'-'${candidate[1]}'`);
+                                } else if (candidate.length === 1) {
+                                    expectedParts.push(`'${candidate}'`);
+                                } else {
+                                    expectedParts.push(candidate);
+                                }
                             }
-                        }
 
-                        const expectedPartCount = expectedParts.length;
-                        if (expectedPartCount > 1) {
-                            expectedParts[expectedPartCount - 1] = `${expectedParts[expectedPartCount - 2]} or ${expectedParts.pop()}`;
-                        }
+                            const expectedPartCount = expectedParts.length;
+                            if (expectedPartCount > 1) {
+                                expectedParts[expectedPartCount - 1] = `${expectedParts[expectedPartCount - 2]} or ${expectedParts.pop()}`;
+                            }
 
-                        reject(new Error(`Invalid JSON file; expected ${expectedParts.join(', ')} ${feedback.context}, but found '${String.fromCodePoint(feedback.codePoint)}' instead`));
+                            reject(new Error(`Invalid JSON file; expected ${expectedParts.join(', ')} ${feedback.context}, but found '${String.fromCodePoint(feedback.codePoint)}' instead`));
+                        }
                     } else {
                         reject(new Error('Invalid JSON file; unknown error'));
                     }
