@@ -7,6 +7,7 @@ import { CommaToken } from './CommaToken.js';
 import { valueToToken } from '../util/valueToToken.js';
 import { WhitespacesToken } from './WhitespacesToken.js';
 import { type StreamWriter } from '../util/StreamWriter.js';
+import { evalCollectionOrOtherToken } from '../util/evalCollectionOrOtherToken.js';
 
 export class ArrayToken extends JSONParentToken<JSONTokenType.Array> implements JSONValueToken {
     constructor() {
@@ -245,7 +246,7 @@ export class ArrayToken extends JSONParentToken<JSONTokenType.Array> implements 
                 }
 
                 expectedToken = JSONTokenType.Comma;
-                arr.push((child as JSONValueToken).evaluate());
+                arr.push(evalCollectionOrOtherToken(child as JSONValueToken, allowTrailingCommas));
                 needsValue = false;
             } else if (expectedToken === JSONTokenType.Comma) {
                 expectedToken = null;

@@ -9,6 +9,7 @@ import { ColonToken } from './ColonToken.js';
 import { CommaToken } from './CommaToken.js';
 import { KeyToken } from './KeyToken.js';
 import { WhitespacesToken } from './WhitespacesToken.js';
+import { evalCollectionOrOtherToken } from '../util/evalCollectionOrOtherToken.js';
 
 export class ObjectToken extends JSONParentToken<JSONTokenType.Object> implements JSONValueToken {
     constructor() {
@@ -72,7 +73,7 @@ export class ObjectToken extends JSONParentToken<JSONTokenType.Object> implement
                     throw new Error('Non-value token as value in object');
                 }
 
-                const value = (child as JSONValueToken).evaluate();
+                const value = evalCollectionOrOtherToken(child as JSONValueToken, allowTrailingCommas);
                 expectedToken = JSONTokenType.Comma;
                 obj[key!] = value;
             } else if (expectedToken === JSONTokenType.Comma) {
@@ -154,14 +155,14 @@ export class ObjectToken extends JSONParentToken<JSONTokenType.Object> implement
     maybeGetValueOfKey(key: string) {
         const token = this.maybeGetValueTokenOfKey(key);
         if (token) {
-            return token.evaluate();
+            return evalCollectionOrOtherToken(token, true);
         } else {
             return;
         }
     }
 
     getValueOfKey(key: string) {
-        return this.getValueTokenOfKey(key).evaluate();
+        return evalCollectionOrOtherToken(this.getValueTokenOfKey(key), true);
     }
 
     setValueOfKey(key: string, value: unknown, indent = 0) {
@@ -191,7 +192,7 @@ export class ObjectToken extends JSONParentToken<JSONTokenType.Object> implement
 
             return true;
         } else {
-            const curValue = token.evaluate();
+            const curValue = evalCollectionOrOtherToken(token, true);
             if (curValue !== value) {
                 this.replaceChild(token, valueToToken(value));
                 return true;
