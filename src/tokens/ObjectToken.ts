@@ -45,7 +45,7 @@ export class ObjectToken extends JSONParentToken<JSONTokenType.Object> implement
         return token;
     }
 
-    evaluate() {
+    evaluate(allowTrailingCommas = false) {
         const obj: Record<string, unknown> = {};
         let expectedToken: JSONTokenType | null = JSONTokenType.Key;
         let needsKey = false;
@@ -81,8 +81,8 @@ export class ObjectToken extends JSONParentToken<JSONTokenType.Object> implement
             }
         }
 
-        if (needsKey) {
-            throw new Error('Dangling comma in object');
+        if (needsKey && !allowTrailingCommas) {
+            throw new Error('Trailing comma in object');
         } else if (expectedToken !== JSONTokenType.Key && expectedToken !== JSONTokenType.Comma) {
             throw new Error('Malformed object');
         }

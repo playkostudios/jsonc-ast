@@ -42,7 +42,6 @@ export class ArrayToken extends JSONParentToken<JSONTokenType.Array> implements 
     getTokenEntries(): Array<JSONValueToken> {
         const arr: Array<JSONValueToken> = [];
         let expectedToken = null;
-        let needsValue = false;
 
         for (const child of this.children) {
             const type = child.type;
@@ -59,15 +58,9 @@ export class ArrayToken extends JSONParentToken<JSONTokenType.Array> implements 
 
                 expectedToken = JSONTokenType.Comma;
                 arr.push(child as JSONValueToken);
-                needsValue = false;
             } else if (expectedToken === JSONTokenType.Comma) {
                 expectedToken = null;
-                needsValue = true;
             }
-        }
-
-        if (needsValue) {
-            throw new Error('Dangling comma in array');
         }
 
         return arr;
@@ -150,7 +143,6 @@ export class ArrayToken extends JSONParentToken<JSONTokenType.Array> implements 
         let insertCount = items.length;
         let insertIdx = 0;
         let expectedToken = null;
-        let needsValue = false;
         const indentation = this.guessValueIndent();
         const deleted: Array<JSONValueToken> = [];
         let deleteStart = -1;
@@ -173,8 +165,6 @@ export class ArrayToken extends JSONParentToken<JSONTokenType.Array> implements 
                 if (!child.isValue) {
                     throw new Error('Non-value token as value in array');
                 }
-
-                needsValue = false;
 
                 if (start > 0) {
                     start--;
@@ -216,12 +206,7 @@ export class ArrayToken extends JSONParentToken<JSONTokenType.Array> implements 
 
                 lastCommaIdx = t;
                 expectedToken = null;
-                needsValue = true;
             }
-        }
-
-        if (needsValue) {
-            throw new Error('Dangling comma in array');
         }
 
         // actually delete deletion range
@@ -241,7 +226,7 @@ export class ArrayToken extends JSONParentToken<JSONTokenType.Array> implements 
         return deleted;
     }
 
-    evaluate() {
+    evaluate(allowTrailingCommas = false) {
         const arr = [];
         let expectedToken = null;
         let needsValue = false;
@@ -268,8 +253,8 @@ export class ArrayToken extends JSONParentToken<JSONTokenType.Array> implements 
             }
         }
 
-        if (needsValue) {
-            throw new Error('Dangling comma in array');
+        if (needsValue && !allowTrailingCommas) {
+            throw new Error('Trailing comma in array');
         }
 
         return arr;

@@ -3,6 +3,8 @@ import { type JSONToken } from '../base/JSONToken.js';
 import { JSONTokenType } from '../base/JSONTokenType.js';
 import { type JSONValueToken } from '../base/JSONValueToken.js';
 import { assertTokenType } from '../util/assertTokenType.js';
+import { type ArrayToken } from './ArrayToken.js';
+import { type ObjectToken } from './ObjectToken.js';
 
 export class RootToken extends JSONParentToken<JSONTokenType.Root> {
     constructor() {
@@ -38,7 +40,14 @@ export class RootToken extends JSONParentToken<JSONTokenType.Root> {
         return token;
     }
 
-    getValue() {
-        return this.getValueToken().evaluate();
+    getValue(allowTrailingCommas = false) {
+        const valToken = this.getValueToken();
+        if (valToken.type === JSONTokenType.Object) {
+            return (valToken as ObjectToken).evaluate(allowTrailingCommas);
+        } else if (valToken.type === JSONTokenType.Array) {
+            return (valToken as ArrayToken).evaluate(allowTrailingCommas);
+        } else {
+            return valToken.evaluate();
+        }
     }
 }
