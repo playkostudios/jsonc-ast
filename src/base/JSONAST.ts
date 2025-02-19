@@ -1,4 +1,4 @@
-import { createReadStream } from 'node:fs';
+import { closeSync, createReadStream, openSync, readSync } from 'node:fs';
 import { isError, JsonErrorType, type JsonStandardFeedback, type JsonUnexpectedFeedback } from '@xtao-org/jsonhilo';
 import { Utf8bs2c } from 'utf8x2x';
 import { JsonCLow, _asterisk_ } from './JsonCLow.js';
@@ -24,6 +24,8 @@ import { StreamWriter } from '../util/StreamWriter.js';
 import { type JSONParentToken } from './JSONParentToken.js';
 import { JSONTokenType } from './JSONTokenType.js';
 
+const SYNC_READ_CHUNK_SIZE = 4096;
+
 export class JSONAST {
     root: RootToken | null = null;
     stack = new Array<JSONParentToken>();
@@ -35,6 +37,12 @@ export class JSONAST {
     static async parseValue(path: string, allowComments: boolean | undefined, allowTrailingCommas: boolean | undefined) {
         const ast = new JSONAST();
         const root = await ast.parse(path, allowComments);
+        return root.getValue(allowTrailingCommas);
+    }
+
+    static parseValueSync(path: string, allowComments: boolean | undefined, allowTrailingCommas: boolean | undefined) {
+        const ast = new JSONAST();
+        const root = ast.parseSync(path, allowComments);
         return root.getValue(allowTrailingCommas);
     }
 
@@ -354,6 +362,41 @@ export class JSONAST {
                 reject(err);
             }
         });
+    }
+
+    parseSync(path: string, allowComments = false): RootToken {
+        this.pushToken(new RootToken());
+
+        // open file for reading
+        let rootToken: RootToken | undefined;
+        const parser = this.createParseContext(allowComments, (out) => {
+            rootToken = out;
+        }, (err) => {
+            throw err;
+        });
+
+        const chunk = Buffer.allocUnsafe(SYNC_READ_CHUNK_SIZE);
+        let fd = openSync(path, 'r');
+        try {
+            let bytesRead: number;
+            while ((bytesRead = readSync(fd, chunk, 0, SYNC_READ_CHUNK_SIZE, -1)) > 0) {
+                if (bytesRead === SYNC_READ_CHUNK_SIZE) {
+                    parser.bytes(chunk);
+                } else {
+                    parser.bytes(new Uint8Array(chunk.buffer, 0, bytesRead));
+                }
+            }
+
+            parser.end();
+        } finally {
+            closeSync(fd);
+        }
+
+        if (rootToken === undefined) {
+            throw new Error('rootToken is undefined. Please report this to the jsonc-ast library developer');
+        }
+
+        return rootToken;
     }
 
     async writeToFile(path: string) {
